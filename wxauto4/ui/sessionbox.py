@@ -47,6 +47,7 @@ class SessionBox:
             force: bool = False,
             force_wait: Union[float, int] = 0.5
         ):
+        self.parent._show()
         self.searchbox.RightClick()
         SetClipboardText(keywords)
         menu = Menu(self)

@@ -407,3 +407,35 @@ def get_windows_by_pid(pid):
             return windows
         except :
             time.sleep(0.1)
+
+def get_monitor_info():
+    monitors = []
+    
+    # 枚举所有显示器设备
+    for i in range(0, 10):  # 假设最多有 10 个显示器
+        try:
+            device = win32api.EnumDisplayDevices(None, i)
+            device_name = device.DeviceName  # 显示器名称
+            settings = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
+            
+            # 获取显示器的分辨率
+            width = settings.PelsWidth
+            height = settings.PelsHeight
+
+            # 获取显示器的物理坐标
+            x = settings.Position_x
+            y = settings.Position_y
+
+            monitor_info = {
+                'Device Name': device_name,
+                'Width': width,
+                'Height': height,
+                'Position': (x, y)
+            }
+
+            monitors.append(monitor_info)
+        
+        except Exception as e:
+            break  # 如果超出了显示器数量，终止
+
+    return monitors

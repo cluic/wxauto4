@@ -308,7 +308,7 @@ class WeChat(Chat, Listener):
             self._listener_start()
         if nickname in self.listen:
             return WxResponse.failure('该聊天已监听')
-        subwin = self._api.open_separate_window(nickname)
+        subwin = self._api.open_separate_window(nickname, resize=True)
         if subwin is None:
             return WxResponse.failure('找不到聊天窗口')
         name = subwin.nickname

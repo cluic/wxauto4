@@ -6,7 +6,8 @@ from wxauto4.utils.win32 import (
     FindWindow,
     GetAllWindows,
     GetPathByHwnd,
-    get_windows_by_pid
+    get_windows_by_pid,
+    get_monitor_info
 )
 from wxauto4.param import WxParam, WxResponse, PROJECT_NAME
 from wxauto4.logger import wxlog
@@ -31,7 +32,8 @@ class WeChatSubWnd(BaseUISubWnd):
             self, 
             key: Union[str, int], 
             parent: 'WeChatMainWnd', 
-            timeout: int = 3
+            timeout: int = 3,
+            resize:bool = False
         ):
         self.root = self
         self.parent = parent
@@ -39,6 +41,9 @@ class WeChatSubWnd(BaseUISubWnd):
             hwnd = FindWindow(classname=self._win_cls_name, name=key, timeout=timeout)
         else:
             hwnd = key
+        self.HWND = hwnd
+        if resize:
+            self.auto_resize()
         self.control = uia.ControlFromHandle(hwnd)
         if self.control is not None:
             chatbox_control = self.control.\
@@ -55,6 +60,21 @@ class WeChatSubWnd(BaseUISubWnd):
         if not hasattr(self, '_pid'):
             self._pid = self.control.ProcessId
         return self._pid
+    
+    def auto_resize(self):
+        try:
+            monitors = get_monitor_info()
+            xy = max(monitors, key=lambda x: x['Height'])['Position']
+        except:
+            xy = (0, 0)
+        self.set_window_size(*WxParam.CHAT_WINDOW_SIZE, xy)
+    
+    def set_window_size(self, width, height, location: tuple=None):
+        if location:
+            x, y = location
+            uia.win32gui.MoveWindow(self.HWND, x, y, width, height, True)
+        else:
+            uia.win32gui.SetWindowPos(self.HWND, 0, 0, 0, width, height, 6)
     
     def _get_chatbox(
             self, 
@@ -115,8 +135,6 @@ version_error_msg = """
 
 wxauto4项目目前仅适用于4.0.5.x版本客户端
 下载链接：https://github.com/SiverKing/wechat4.0-windows-versions/releases/download/v4.0.5.26/weixin_4.0.5.26.exe
-
-提示：推荐使用适用于3.9客户端的wxauto项目(https://github.com/cluic/wxauto)，更加稳定
 """
 
 class WeChatMainWnd(WeChatSubWnd):
@@ -213,7 +231,7 @@ class WeChatMainWnd(WeChatSubWnd):
             if subwin.nickname == who:
                 return subwin
             
-    def open_separate_window(self, keywords: str) -> WeChatSubWnd:
+    def open_separate_window(self, keywords: str, resize=True) -> WeChatSubWnd:
         if subwin := self.get_sub_wnd(keywords):
             wxlog.debug(f"{keywords} 获取到已存在的子窗口: {subwin}")
             return subwin
@@ -226,4 +244,4 @@ class WeChatMainWnd(WeChatSubWnd):
                 keywords = nickname
         if result := self._session_api.open_separate_window(keywords):
             find_nickname = result['data'].get('nickname', keywords)
-            return WeChatSubWnd(find_nickname, self)
+            return WeChatSubWnd(find_nickname, self, resize=resize)

@@ -118,7 +118,10 @@ def delete_update_files():
     update_dir = home / 'AppData' / 'Roaming' / 'Tencent' / 'xwechat' / 'update'
     if update_dir.exists():
         for file in update_dir.iterdir():
-            shutil.rmtree(file) if file.is_dir() else file.unlink()
+            try:
+                shutil.rmtree(file) if file.is_dir() else file.unlink()
+            except:
+                pass
 
 
 # ============================================================================================================================================

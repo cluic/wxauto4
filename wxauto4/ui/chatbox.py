@@ -110,6 +110,7 @@ class ChatBox(BaseUISubWnd):
         if (cid := self.id) and cid not in USED_MSG_IDS:
             # print("init chatbox", cid)
             USED_MSG_IDS[self.id] = tuple((i.runtimeid for i in self.msgbox.GetChildren()))
+            LAST_MSG_COUNT[self.id] = len(USED_MSG_IDS[self.id])
             if not USED_MSG_IDS[cid]:
                 self._empty = True
 
@@ -120,36 +121,18 @@ class ChatBox(BaseUISubWnd):
         self.editbox.SendKeys('{DELETE}')
 
 
-    def send_text(self, content: str):
-        self._show()
+    def send_text(self, content:str):
         t0 = time.time()
         while True:
-            if time.time() - t0 > 10:
-                return WxResponse.failure(f'Timeout --> {self.who} - {content}')
+            if time.time() - t0 > 5:
+                return WxResponse.failure(f"发送消息超时：{content}")
             SetClipboardText(content)
             self._activate_editbox()
             self.editbox.SendKeys('{Ctrl}v')
-            if self.editbox.GetValuePattern().Value.replace('￼', '').strip():
-                break
-            self.editbox.SendKeys('{Ctrl}v')
-            if self.editbox.GetValuePattern().Value.replace('￼', '').strip():
-                break
-            self.editbox.RightClick()
-            menu = Menu(self)
-            menu.select('粘贴')
-            if self.editbox.GetValuePattern().Value.replace('￼', '').strip():
-                break
-        t0 = time.time()
-        while self.editbox.GetValuePattern().Value:
-            if time.time() - t0 > 10:
-                return WxResponse.failure(f'Timeout --> {self.who} - {content}')
-            self._activate_editbox()
-
             self.sendbtn.Click()
-            if not self.editbox.GetValuePattern().Value:
-                return WxResponse.success(f"success")
-            elif not self.editbox.GetValuePattern().Value.replace('￼', '').strip():
-                return self.send_text(content)
+            time.sleep(0.1)
+            if self.sendbtn.GetLegacyIAccessiblePattern().State == 0x100001:
+                return WxResponse.success()
 
     def send_msg(self, content: str, clear: bool=True, at=None):
         wxlog.debug(f"发送消息: {content}")
@@ -175,6 +158,8 @@ class ChatBox(BaseUISubWnd):
         SetClipboardFiles(file_path)
         self.editbox.SendKeys('{Ctrl}v')
         self.sendbtn.Click()
+        if self.sendbtn.GetLegacyIAccessiblePattern().State == 0x100001:
+            return WxResponse.success()
 
     def input_at(self, at_list):
         if isinstance(at_list, str):
@@ -204,6 +189,7 @@ class ChatBox(BaseUISubWnd):
         current_msg_count = len(now_msg_ids)
         
         if not now_msg_ids:  # 当前没有消息id
+            wxlog.debug("聊天窗口无消息")
             return []
         
         # 确保used_msg_ids不为None
